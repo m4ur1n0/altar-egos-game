@@ -1,9 +1,10 @@
 'use client';
 import { useState } from 'react';
+import { api } from '@/lib/store';
 
 // Image search through the backend's /proxy (same-origin, so picked images can be drawn to canvas).
 // Source: Openverse (no API key). To change source, change `search` and the PROXY_OK list in server.js + worker.
-const proxied = (u: string) => '/proxy?u=' + encodeURIComponent(u);
+const proxied = (u: string) => api('/proxy?u=' + encodeURIComponent(u));
 
 async function search(q: string): Promise<string[]> {
   const r = await fetch(proxied('https://api.openverse.org/v1/images/?page_size=20&q=' + encodeURIComponent(q)));

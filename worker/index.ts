@@ -46,21 +46,30 @@ export class Room extends DurableObject<Env> {
   }
 }
 
+// The site may be hosted elsewhere (e.g. Vercel), so API responses allow any origin.
+const cors = (r: Response) => { const o = new Response(r.body, r); o.headers.set('Access-Control-Allow-Origin', '*'); return o; };
+
 export default {
   async fetch(req: Request, env: Env) {
     const u = new URL(req.url);
-    let room = u.searchParams.get('room');
-    if (u.pathname === '/proxy') {
-      const t = u.searchParams.get('u') || '';
-      if (!PROXY_OK.some(p => t.startsWith(p))) return new Response(null, { status: 403 });
-      const r = await fetch(t);
-      return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') || 'application/octet-stream' } });
-    }
-    if (u.pathname === '/set' && req.method === 'POST') {
-      const body = await req.text();
-      room = JSON.parse(body).room;
-      req = new Request(req.url, { method: 'POST', body });
-    } else if (u.pathname !== '/events' && u.pathname !== '/reset') return env.ASSETS.fetch(req);
-    return env.ROOM.get(env.ROOM.idFromName(room || 'main')).fetch(req);
+    if (req.method === 'OPTIONS') return cors(new Response(null, { headers: { 'Access-Control-Allow-Methods': 'GET, POST', 'Access-Control-Allow-Headers': '*' } }));
+    const res = await api(req, env, u);
+    return ['/events', '/set', '/reset', '/proxy'].includes(u.pathname) ? cors(res) : res;
   },
 };
+
+async function api(req: Request, env: Env, u: URL) {
+  let room = u.searchParams.get('room');
+  if (u.pathname === '/proxy') {
+    const t = u.searchParams.get('u') || '';
+    if (!PROXY_OK.some(p => t.startsWith(p))) return new Response(null, { status: 403 });
+    const r = await fetch(t);
+    return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') || 'application/octet-stream' } });
+  }
+  if (u.pathname === '/set' && req.method === 'POST') {
+    const body = await req.text();
+    room = JSON.parse(body).room;
+    req = new Request(req.url, { method: 'POST', body });
+  } else if (u.pathname !== '/events' && u.pathname !== '/reset') return env.ASSETS.fetch(req);
+  return env.ROOM.get(env.ROOM.idFromName(room || 'main')).fetch(req);
+}
