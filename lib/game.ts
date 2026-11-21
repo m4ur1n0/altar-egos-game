@@ -2,7 +2,8 @@ import game from '@/config/game.json';
 import roundTypes from '@/config/rounds.json';
 import { set, type Docs } from './store';
 
-export type Phase = 'lobby' | 'create' | 'meet' | 'act' | 'review' | 'vote' | 'score' | 'perf' | 'perfvote' | 'end';
+const PHASES = ['lobby', 'create', 'meet', 'act', 'review', 'vote', 'score', 'perf', 'perfvote', 'end'] as const;
+export type Phase = typeof PHASES[number];
 // plan: the round type key of every round this game, picked by the host when the game begins.
 export interface State { phase: Phase; gen: number; round: number; t0: number; plan?: string[] }
 export type Character = Record<string, string>;
@@ -73,6 +74,11 @@ export class Game {
 
   constructor(cache: Docs, public uid: string, public room: string) {
     this.S = cache['game/state'] ?? { phase: 'lobby', gen: 0, round: 0, t0: 0 };
+    // A game saved by an older version, or whose round types were renamed/removed from rounds.json,
+    // can't be continued: show a fresh lobby instead (the host's Start writes the real state).
+    const S = this.S, inRounds = !['lobby', 'create', 'meet'].includes(S.phase);
+    if (!PHASES.includes(S.phase) || (inRounds && !(S.plan?.[S.round] && S.plan.every(k => RT[k]))))
+      this.S = { phase: 'lobby', gen: S.gen + 1, round: 0, t0: 0 };
     this.plan = this.S.plan || [];
     for (const k in cache) {
       const [col, id, extra] = k.split('/');
