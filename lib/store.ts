@@ -42,7 +42,9 @@ export function set(path: string, data: unknown) {
   fetch(api('/set'), { method: 'POST', body: JSON.stringify({ room, path, data, by: cid }) }).catch(() => {});
 }
 
-export const add = (col: string, data: unknown) => set(col + '/' + rid() + Date.now().toString(36), data);
+export const peek = (path: string) => cache[path];
+
+export const add =(col: string, data: unknown) => set(col + '/' + rid() + Date.now().toString(36), data);
 
 const subscribe = (f: () => void) => { connect(); subs.add(f); return () => { subs.delete(f); }; };
 

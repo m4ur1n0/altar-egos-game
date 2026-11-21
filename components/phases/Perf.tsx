@@ -54,6 +54,15 @@ export function End() {
         </div>
       ))}
       <div className="m" style={{ marginTop: 8 }}>No characters were revealed.</div>
+      {g.unperformed().length > 0 && <>
+        <h2 style={{ marginTop: 24 }}>Never made it to the stage</h2>
+        {g.unperformed().map(({ id, s }) => (
+          <div key={id + s} className="it">
+            <Avatar id={id} />
+            <div style={{ flex: 1 }}><b>{g.cn(id)}</b><ol style={{ margin: '4px 0' }}>{(g.subOf('r' + s, id)!.data as string[]).filter(Boolean).map((x, i) => <li key={i}>{x}</li>)}</ol></div>
+          </div>
+        ))}
+      </>}
     </div>
   );
 }

@@ -6,7 +6,6 @@
     "bigRoundEvery": 5
   },
   "introCardSeconds": 12,
-  "autoAdvanceGraceSeconds": 5,
   "durations": {
     "create": 240,
     "meet": 120,

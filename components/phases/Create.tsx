@@ -4,6 +4,7 @@ import game from '@/config/game.json';
 import { useGame } from '@/lib/context';
 import { Roster } from '../Character';
 import { ImageSearch } from '../ImageSearch';
+import { useOnPhaseEnd } from './Submit';
 
 const C = game.character;
 
@@ -39,13 +40,15 @@ export function Create() {
     setOk('Saved.');
   }
 
-  // Time's up: save whatever is typed, falling back to what was saved before.
-  const { left } = g.timer(now);
-  useEffect(() => {
-    if (left > 0 || auto.current) return;
+  // Time's up (or the game moved on): save whatever is typed, falling back to what was saved before.
+  const autoSave = () => {
+    if (auto.current) return;
     auto.current = true;
     g.save({ char: { ...Object.fromEntries(C.fields.map(f => [f.key, val(f.key) || old[f.key] || ''])), name: val('name') || old.name || 'Nameless', pic: img } });
-  });
+  };
+  const { left } = g.timer(now);
+  useEffect(() => { if (left === 0) autoSave(); });
+  useOnPhaseEnd(autoSave);
 
   return (
     <>

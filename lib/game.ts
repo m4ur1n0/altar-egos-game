@@ -33,7 +33,6 @@ export interface RoundType {
 export const RT = roundTypes as Record<string, RoundType>;
 const DUR = game.durations as Partial<Record<Phase, number>>;
 const SC = game.scoring;
-const TIMED_SUBMIT: Phase[] = ['act', 'create'];
 
 export const hash = (s: unknown) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 const text = (p: Prompt) => typeof p === 'string' ? p : p.text;
@@ -99,7 +98,22 @@ export class Game {
   // A performance follows every regular round once a standup round has happened.
   hasPerf(r: number) { return !this.rt(r).performance && this.perfSource(r) >= 0; }
   perfNo(r = this.S.round) { let k = 0; for (let i = 0; i < r; i++) if (this.hasPerf(i)) k++; return k; }
-  performer(r = this.S.round) { return this.ids[this.perfNo(r) % this.ids.length]; }
+  wroteSet(s: number) { return this.ids.filter(id => (this.subOf('r' + s, id)?.data || []).some(Boolean)); }
+  // Performers rotate through the players who actually wrote jokes in the latest standup.
+  performer(r = this.S.round) {
+    const s = this.perfSource(r), l = this.wroteSet(s).length ? this.wroteSet(s) : this.ids;
+    let k = 0;
+    for (let i = s + 1; i < r; i++) if (this.hasPerf(i)) k++;
+    return l[k % l.length];
+  }
+  // Standup sets that never got a performance (more players than rounds): shown on the final screen.
+  unperformed() {
+    return this.plan.flatMap((k, s) => {
+      if (!RT[k].performance) return [];
+      const done = new Set(this.plan.map((_, r) => r).filter(r => this.hasPerf(r) && this.perfSource(r) === s).map(r => this.performer(r)));
+      return this.wroteSet(s).filter(id => !done.has(id)).map(id => ({ id, s }));
+    });
+  }
 
   // ---------- helpers ----------
   g<T = any>(n: string): T[] { return (this.X[n] || []).filter(d => d.gen === this.S.gen); }
@@ -210,15 +224,16 @@ export class Game {
     if (c === 'skip') { adv = ''; this.next(); }
     if (c === 'new') this.setState({ phase: 'lobby', gen: S.gen + 1, round: 0, t0: 0 });
   }
-  // Host-only: advance when everyone is done or the timer (plus grace for auto-submits) runs out.
+  // Host-only: advance when everyone is done or the timer runs out. Unsubmitted work is saved by each
+  // client as its phase ends (useOnPhaseEnd), so no grace period is needed.
   hostTick(now: number) {
     if (!this.isHost) return;
     const S = this.S;
     if (S.phase === 'act' && this.players.every(p => this.subOf(this.curKey(), p.id))) return this.next();
     if (S.phase === 'perfvote' && this.players.filter(p => p.id !== this.performer())
       .every(p => this.g<PVote>('pvotes').some(d => d.r === S.round && d.from === p.id))) return this.next();
-    const { d, el, left } = this.timer(now);
-    if (d && left === 0 && el >= d + (TIMED_SUBMIT.includes(S.phase) ? game.autoAdvanceGraceSeconds : 0)) this.next();
+    const { d, el } = this.timer(now);
+    if (d && el >= d) this.next();
   }
 
   submit(kind: Sub['kind'], data: unknown) {

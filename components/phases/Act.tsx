@@ -10,10 +10,10 @@ export function Act() {
   const rt = g.rt(), done = useSubmitted();
   const [text, setText] = useState('');
   const [jokes, setJokes] = useState<string[]>(() => Array(rt.entries ?? 3).fill(''));
-  const cv = useRef<HTMLCanvasElement>(null);
+  const cv = useRef<HTMLCanvasElement>(null), img = useRef('');
 
   const submit = (force?: boolean) => {
-    if (rt.kind === 'draw') { if (cv.current) g.submit('draw', cv.current.toDataURL('image/jpeg', 0.7)); }
+    if (rt.kind === 'draw') { const d = cv.current?.toDataURL('image/jpeg', 0.7) || img.current; if (d) g.submit('draw', d); }
     else if (rt.kind === 'standup') { const j = jokes.map(x => x.trim()); if (!force || j.some(Boolean)) g.submit('jokes', j); }
     else if (text.trim() || !force) g.submit('text', text.trim());
   };
@@ -22,7 +22,7 @@ export function Act() {
     <div className="box">
       <div className="m">{rt.big ? rt.label : `round ${g.roundNo()} / ${rt.label}`}</div>
       <h2>{g.promptFor(g.S.round)}</h2>
-      {rt.kind === 'draw' && <DrawingCanvas ref={cv} locked={done} />}
+      {rt.kind === 'draw' && <DrawingCanvas ref={cv} locked={done} onDraw={u => { img.current = u; }} />}
       {rt.kind === 'text' && <><textarea style={{ minHeight: 160 }} placeholder="No word limit." disabled={done} value={text} onChange={e => setText(e.target.value)} /><br /><br /></>}
       {rt.kind === 'standup' && <>
         {jokes.map((j, i) => (
