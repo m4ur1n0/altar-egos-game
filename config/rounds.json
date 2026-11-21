@@ -1,14 +1,47 @@
 {
+  "standup": {
+    "kind": "standup",
+    "big": true,
+    "label": "stand up",
+    "seconds": 180,
+    "entries": 3,
+    "card": {
+      "title": "STAND UP",
+      "subtitle": "WRITE YOUR SET",
+      "rules": [
+        "Write three stand up jokes from your character's perspective.",
+        "You have {time}.",
+        "Your jokes are saved. After each of the next rounds, one character takes the stage."
+      ]
+    },
+    "prompts": [
+      "Write three stand up jokes from the perspective of your character."
+    ],
+    "performance": {
+      "seconds": 180,
+      "card": {
+        "title": "PERFORMANCE",
+        "subtitle": "ON STAGE",
+        "rules": [
+          "One character's jokes are on stage.",
+          "Comment and engage for {time}. Messages arrive after a 10 second delay.",
+          "Then everyone gives a secret thumbs up or thumbs down. A majority of thumbs up earns the performer a point."
+        ]
+      }
+    }
+  },
   "question": {
     "kind": "text",
     "label": "question",
+    "seconds": 120,
+    "weight": 1,
     "favorite": false,
     "card": {
       "title": "ROUND",
       "subtitle": "QUESTION ROUND",
       "rules": [
         "Everyone answers the same prompt.",
-        "2 minutes. No word limit.",
+        "{time}. No word limit.",
         "Next you read everyone's answers and like the ones you like. Each like is a point for that character.",
         "Then you vote on who is behind each character."
       ]
@@ -26,13 +59,15 @@
   "drawing": {
     "kind": "draw",
     "label": "drawing",
+    "seconds": 120,
+    "weight": 1,
     "favorite": true,
     "card": {
       "title": "ROUND",
       "subtitle": "DRAWING ROUND",
       "rules": [
         "Everyone draws the same prompt.",
-        "2 minutes. Use any colors you like.",
+        "{time}. Use any colors you like.",
         "Next you see everyone's drawings, like the ones you like, and pick one overall favorite.",
         "Then you vote on who is behind each character."
       ]

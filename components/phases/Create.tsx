@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import game from '@/config/game.json';
 import { useGame } from '@/lib/context';
 import { Roster } from '../Character';
+import { ImageSearch } from '../ImageSearch';
 
 const C = game.character;
 
 // Center-crop and shrink an uploaded image to a small square JPEG data URL.
-function pic(f: File): Promise<string> {
+function pic(f: Blob): Promise<string> {
   return new Promise(res => {
     const i = new Image();
     i.onload = () => {
@@ -26,14 +27,15 @@ export function Create() {
   const { g, now } = useGame();
   const old = g.me?.char || {};
   const [v, setV] = useState<Record<string, string>>(() => Object.fromEntries(C.fields.map(f => [f.key, old[f.key] || ''])));
-  const [file, setFile] = useState<File>();
+  const [img, setImg] = useState(old.pic || '');
   const [ok, setOk] = useState('');
   const auto = useRef(false);
   const val = (k: string) => (v[k] || '').trim();
+  const choose = async (f?: Blob) => { if (f) setImg(await pic(f)); };
 
-  async function save() {
+  function save() {
     if (!val('name')) { setOk('Name your character first.'); return; }
-    g.save({ char: { ...Object.fromEntries(C.fields.map(f => [f.key, val(f.key)])), pic: file ? await pic(file) : old.pic || '' } });
+    g.save({ char: { ...Object.fromEntries(C.fields.map(f => [f.key, val(f.key)])), pic: img } });
     setOk('Saved.');
   }
 
@@ -42,7 +44,7 @@ export function Create() {
   useEffect(() => {
     if (left > 0 || auto.current) return;
     auto.current = true;
-    g.save({ char: { ...Object.fromEntries(C.fields.map(f => [f.key, val(f.key) || old[f.key] || ''])), name: val('name') || old.name || 'Nameless', pic: old.pic || '' } });
+    g.save({ char: { ...Object.fromEntries(C.fields.map(f => [f.key, val(f.key) || old[f.key] || ''])), name: val('name') || old.name || 'Nameless', pic: img } });
   });
 
   return (
@@ -59,7 +61,11 @@ export function Create() {
           </div>
         ))}
         <label>Profile picture</label>
-        <input type="file" accept="image/*" onChange={e => setFile(e.target.files?.[0])} />
+        <div className="row">
+          {img && <img className="av" src={img} alt="" style={{ width: 60, height: 60 }} />}
+          <input type="file" accept="image/*" onChange={e => choose(e.target.files?.[0])} />
+        </div>
+        <ImageSearch onPick={choose} />
         <br /><br />
         <button onClick={save}>Save character</button> <span className="m">{ok}</span>
       </div>

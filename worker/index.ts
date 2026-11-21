@@ -5,6 +5,7 @@ import { DurableObject } from 'cloudflare:workers';
 interface Env { ROOM: DurableObjectNamespace<Room>; ASSETS: Fetcher }
 
 const enc = new TextEncoder();
+const PROXY_OK = ['https://api.openverse.org/']; // image search (components/ImageSearch.tsx); keep in sync with server.js
 const msg = (o: unknown) => enc.encode('data:' + JSON.stringify(o) + '\n\n');
 
 export class Room extends DurableObject<Env> {
@@ -49,6 +50,12 @@ export default {
   async fetch(req: Request, env: Env) {
     const u = new URL(req.url);
     let room = u.searchParams.get('room');
+    if (u.pathname === '/proxy') {
+      const t = u.searchParams.get('u') || '';
+      if (!PROXY_OK.some(p => t.startsWith(p))) return new Response(null, { status: 403 });
+      const r = await fetch(t);
+      return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') || 'application/octet-stream' } });
+    }
     if (u.pathname === '/set' && req.method === 'POST') {
       const body = await req.text();
       room = JSON.parse(body).room;

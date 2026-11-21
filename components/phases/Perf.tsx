@@ -6,7 +6,7 @@ import { ChatInput, Feed } from '../Chat';
 
 export function Perf() {
   const { g } = useGame();
-  const p = g.performer(g.S.round), jokes: string[] = (g.subOf('joke', p)?.data || []).filter(Boolean);
+  const p = g.performer(), jokes: string[] = (g.subOf('r' + g.perfSource(), p)?.data || []).filter(Boolean);
   return (
     <>
       <div className="box">
@@ -26,7 +26,7 @@ export function Perf() {
 
 export function PerfVote() {
   const { g } = useGame();
-  if (g.performer(g.S.round) === g.uid)
+  if (g.performer() === g.uid)
     return <div className="box"><h2>The audience is voting</h2><div className="m">Your performance is being judged.</div></div>;
   const down = g.myPVote()?.up === false;
   return (

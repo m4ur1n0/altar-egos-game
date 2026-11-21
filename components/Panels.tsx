@@ -1,8 +1,7 @@
 'use client';
 import { useRef, useState } from 'react';
-import cards from '@/config/cards.json';
 import { useGame } from '@/lib/context';
-import { ROUNDS, roundType, type Card } from '@/lib/game';
+import { cardRules } from '@/lib/game';
 import { Avatar, CharacterCard } from './Character';
 
 const BG = ['wizard', 'robot', 'horse', 'lion', 'clam', 'poet', 'dino'];
@@ -15,14 +14,15 @@ export function Background() {
 export function IntroCard() {
   const { g, now } = useGame();
   const { S } = g;
-  if (!g.me || now >= S.t0 || !['joke', 'act', 'perf'].includes(S.phase)) return null;
-  const c: Card = S.phase === 'act' ? roundType(S.round).card : cards[S.phase as 'joke' | 'perf'];
-  const title = c.title + (S.phase === 'act' ? ` ${S.round + 1} OF ${ROUNDS.length}` : S.phase === 'perf' ? ' ' + (S.round + 1) : '');
+  if (!g.me || now >= S.t0 || (S.phase !== 'act' && S.phase !== 'perf')) return null;
+  const rt = g.rt(), perf = S.phase === 'perf';
+  const c = perf ? g.rt(g.perfSource()).performance!.card : rt.card;
+  const title = c.title + (perf ? ' ' + (g.perfNo() + 1) : rt.big ? '' : ` ${g.roundNo()} OF ${g.regularRounds}`);
   return (
     <div id="card">
       <div className="t">{title}</div>
-      <div className="s">{c.subtitle}{S.phase === 'perf' && ' / ' + g.cn(g.performer(S.round)).toUpperCase()}</div>
-      <ul>{c.rules.map((r, i) => <li key={i}>{r}</li>)}</ul>
+      <div className="s">{c.subtitle}{perf && ' / ' + g.cn(g.performer()).toUpperCase()}</div>
+      <ul>{cardRules(c, g.duration()!).map((r, i) => <li key={i}>{r}</li>)}</ul>
       <div className="big" style={{ marginTop: 20 }}>starts in {Math.max(0, Math.ceil((S.t0 - now) / 1000))}</div>
     </div>
   );

@@ -7,7 +7,7 @@ export function Vote() {
   const hs = g.others(), mine = g.myVote()?.guesses || {};
   return (
     <div className="box">
-      <div className="m">round {g.S.round + 1}</div>
+      <div className="m">round {g.roundNo()}</div>
       <h2>Who is who?</h2>
       <div className="m">Guess who is behind each character. Change your mind any time before the timer ends.</div>
       {hs.length ? hs.map(p => (

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import boons from '@/config/boons.json';
 import game from '@/config/game.json';
 import { useGame } from '@/lib/context';
-import { roundType, type Boon as BoonDoc, type Like, type Note } from '@/lib/game';
+import { type Boon as BoonDoc, type Like, type Note } from '@/lib/game';
 
 const SC = game.scoring, sign = (n: number) => (n >= 0 ? '+' : '') + n;
 const BOONS = boons as Record<string, string>;
@@ -14,12 +14,12 @@ export function Score() {
   return (
     <>
       <div className="box">
-        <div className="m">round {g.S.round + 1} results</div>
+        <div className="m">round {g.roundNo()} results</div>
         <h2>Your points</h2>
         <div className="big0">{sign(t.t)}</div>
         <div>
           Likes received: {sign(t.L * SC.like)}<br />
-          {roundType(g.S.round).favorite && <>Favorite votes: {sign(t.F * SC.favorite)}<br /></>}
+          {g.rt().favorite && <>Favorite votes: {sign(t.F * SC.favorite)}<br /></>}
           People who guessed you: {sign(t.by * SC.guessedBy)}<br />
           Your correct guesses: {sign(t.hit * SC.correctGuess)}
           {t.take !== 0 && <><br />Points taken: {sign(t.take * SC.takePoint)}</>}

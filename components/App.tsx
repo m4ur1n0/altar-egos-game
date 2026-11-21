@@ -3,14 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import game from '@/config/game.json';
 import { flush } from '@/lib/chat';
 import { GameCtx } from '@/lib/context';
-import { DUR, Game, type Phase } from '@/lib/game';
+import { Game, type Phase } from '@/lib/game';
 import { room, uid, useStore } from '@/lib/store';
 import { MainChat } from './Chat';
 import { Background, HostControls, IntroCard, Notebook, Profiles } from './Panels';
 import { Act } from './phases/Act';
 import { Create } from './phases/Create';
 import { Join, Lobby } from './phases/Join';
-import { Joke } from './phases/Joke';
 import { Meet } from './phases/Meet';
 import { End, Perf, PerfVote } from './phases/Perf';
 import { Review } from './phases/Review';
@@ -18,7 +17,7 @@ import { Score } from './phases/Score';
 import { Vote } from './phases/Vote';
 
 const STAGES: Record<Phase, () => React.ReactNode> = {
-  lobby: Lobby, create: Create, meet: Meet, joke: Joke, act: Act, review: Review,
+  lobby: Lobby, create: Create, meet: Meet, act: Act, review: Review,
   vote: Vote, score: Score, perf: Perf, perfvote: PerfVote, end: End,
 };
 const TABS = { game: 'GAME', prof: 'PROFILES', notes: 'NOTES' };
@@ -44,8 +43,8 @@ export default function App() {
 
   const inGame = !!me && !['lobby', 'create'].includes(S.phase);
   const curTab = inGame ? tab : 'game';
-  const { el, left } = g.timer(now);
-  const timer = !DUR[S.phase] ? LBL[S.phase] : el < 0 ? 'starting' : `${LBL[S.phase]}  ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  const { d, el, left } = g.timer(now);
+  const timer = !d ? LBL[S.phase] : el < 0 ? 'starting' : `${LBL[S.phase]}  ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
   const Stage = STAGES[S.phase];
 
   return (

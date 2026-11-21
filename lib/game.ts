@@ -2,8 +2,9 @@ import game from '@/config/game.json';
 import roundTypes from '@/config/rounds.json';
 import { set, type Docs } from './store';
 
-export type Phase = 'lobby' | 'create' | 'meet' | 'joke' | 'act' | 'review' | 'vote' | 'score' | 'perf' | 'perfvote' | 'end';
-export interface State { phase: Phase; gen: number; round: number; t0: number }
+export type Phase = 'lobby' | 'create' | 'meet' | 'act' | 'review' | 'vote' | 'score' | 'perf' | 'perfvote' | 'end';
+// plan: the round type key of every round this game, picked by the host when the game begins.
+export interface State { phase: Phase; gen: number; round: number; t0: number; plan?: string[] }
 export type Character = Record<string, string>;
 export interface Player { id: string; gen: number; joined: number; real: string; char: Character | null }
 export interface Sub { gen: number; key: string; from: string; kind: 'text' | 'draw' | 'jokes'; data: any }
@@ -15,20 +16,50 @@ export interface Note { id: string; gen: number; text: string }
 export interface Msg { gen: number; ch: string; from: string; to: string; text: string; t: number }
 
 type Prompt = string | { text: string; tag?: string };
-export interface RoundType { kind: 'text' | 'draw'; label: string; favorite: boolean; card: Card; prompts: Prompt[] }
 export interface Card { title: string; subtitle: string; rules: string[] }
+export interface RoundType {
+  kind: 'text' | 'draw' | 'standup';
+  big?: boolean;
+  weight?: number;
+  label: string;
+  seconds: number;
+  entries?: number;
+  favorite?: boolean;
+  card: Card;
+  prompts: Prompt[];
+  performance?: { seconds: number; card: Card };
+}
 
-export const ROUNDS = game.rounds;
 export const RT = roundTypes as Record<string, RoundType>;
-export const roundType = (r: number) => RT[ROUNDS[r]];
-export const DUR = game.durations as Partial<Record<Phase, number>>;
+const DUR = game.durations as Partial<Record<Phase, number>>;
 const SC = game.scoring;
-const TIMED_SUBMIT: Phase[] = ['joke', 'act', 'create'];
+const TIMED_SUBMIT: Phase[] = ['act', 'create'];
 
 export const hash = (s: unknown) => { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
 const text = (p: Prompt) => typeof p === 'string' ? p : p.text;
 const tag = (p: Prompt) => typeof p === 'string' ? undefined : p.tag;
 const shuf = (a: Prompt[], salt: string) => [...a].sort((x, y) => hash(salt + text(x)) - hash(salt + text(y)));
+export const fmtTime = (s: number) => s % 60 ? `${s} seconds` : s === 60 ? '1 minute' : `${s / 60} minutes`;
+export const cardRules = (c: Card, seconds: number) => c.rules.map(r => r.replaceAll('{time}', fmtTime(seconds)));
+
+// Big rounds (standup) open the game and come back every `bigRoundEvery` regular rounds.
+// Regular rounds are weighted-random, avoiding the same type twice in a row when possible.
+export function makePlan() {
+  const keys = Object.keys(RT).filter(k => (RT[k].weight ?? 1) > 0);
+  const big = keys.filter(k => RT[k].big), reg = keys.filter(k => !RT[k].big);
+  const pick = (l: string[]) => {
+    let x = Math.random() * l.reduce((s, k) => s + (RT[k].weight ?? 1), 0);
+    return l.find(k => (x -= RT[k].weight ?? 1) < 0) ?? l[0];
+  };
+  const plan: string[] = [];
+  let last = '';
+  for (let i = 0; i < game.schedule.rounds; i++) {
+    if (big.length && i % game.schedule.bigRoundEvery === 0) plan.push(pick(big));
+    const opts = reg.filter(k => k !== last);
+    plan.push(last = pick(opts.length ? opts : reg));
+  }
+  return plan;
+}
 
 let adv = ''; // last state this client advanced from, so the host never double-advances
 
@@ -39,9 +70,11 @@ export class Game {
   X: Record<string, any[]> = {};
   players: Player[];
   ids: string[];
+  plan: string[];
 
   constructor(cache: Docs, public uid: string, public room: string) {
     this.S = cache['game/state'] ?? { phase: 'lobby', gen: 0, round: 0, t0: 0 };
+    this.plan = this.S.plan || [];
     for (const k in cache) {
       const [col, id, extra] = k.split('/');
       if (!id || extra !== undefined) continue;
@@ -53,36 +86,51 @@ export class Game {
     this.ids = this.players.map(p => p.id).sort((a, b) => hash(this.S.gen + a) - hash(this.S.gen + b));
   }
 
+  // ---------- rounds ----------
+  rt(r = this.S.round) { return RT[this.plan[r]]; }
+  // "round 2 of 4" counts regular rounds only; big rounds sit outside the count.
+  roundNo(r = this.S.round) { return this.plan.slice(0, r + 1).filter(k => !RT[k].big).length; }
+  get regularRounds() { return this.plan.filter(k => !RT[k].big).length; }
+  // The latest round before r that left material to perform (a standup), or -1.
+  perfSource(r = this.S.round) {
+    for (let i = r - 1; i >= 0; i--) if (RT[this.plan[i]].performance) return i;
+    return -1;
+  }
+  // A performance follows every regular round once a standup round has happened.
+  hasPerf(r: number) { return !this.rt(r).performance && this.perfSource(r) >= 0; }
+  perfNo(r = this.S.round) { let k = 0; for (let i = 0; i < r; i++) if (this.hasPerf(i)) k++; return k; }
+  performer(r = this.S.round) { return this.ids[this.perfNo(r) % this.ids.length]; }
+
   // ---------- helpers ----------
   g<T = any>(n: string): T[] { return (this.X[n] || []).filter(d => d.gen === this.S.gen); }
   get me() { const p = this.P[this.uid]; return p && p.gen === this.S.gen ? p : null; }
   get isHost() { return this.players[0]?.id === this.uid; }
   others() { return this.players.filter(p => p.id !== this.uid); }
   cn(id: string) { return this.P[id]?.char?.name || 'Someone'; }
-  performer(r: number) { return this.ids[r % this.ids.length]; }
   assign(pid: string, r: number) {
     const l = this.ids, n = l.length;
     return n < 2 ? null : l[(l.indexOf(pid) + 1 + (r % (n - 1))) % n];
   }
   subOf(k: string, pid: string) { return this.g<Sub>('subs').find(d => d.key === k && d.from === pid); }
-  curKey() { return this.S.phase === 'joke' ? 'joke' : 'r' + this.S.round; }
+  curKey() { return 'r' + this.S.round; }
   myLike(): Like { return this.g<Like>('likes').find(d => d.r === this.S.round && d.from === this.uid) || { gen: this.S.gen, r: this.S.round, from: this.uid, items: [], fav: null }; }
   myVote() { return this.g<Vote>('votes').find(d => d.r === this.S.round && d.from === this.uid); }
   myPVote() { return this.g<PVote>('pvotes').find(d => d.r === this.S.round && d.from === this.uid); }
 
-  // Each round type draws prompts from its own shuffled list. Prompts sharing a tag with one already
-  // used by an earlier round type this game are skipped (e.g. no "outfit" drawing after an "outfit" question).
+  // Walk the plan, giving each round the next unused prompt from its type's shuffled list.
+  // Prompts sharing a tag with one already used are skipped (no "outfit" drawing after an "outfit" question).
   promptFor(r: number) {
-    const type = ROUNDS[r], used = new Set<string>();
-    let list: Prompt[] = [];
-    for (const t of new Set(ROUNDS)) {
-      const l = shuf(RT[t].prompts.filter(p => !used.has(tag(p)!)), t + this.S.gen);
-      if (t === type) { list = l; break; }
-      l.slice(0, ROUNDS.filter(k => k === t).length).forEach(p => tag(p) && used.add(tag(p)!));
+    const usedText = new Set<string>(), usedTag = new Set<string>(), seen: Record<string, number> = {};
+    let pick: Prompt = '';
+    for (let i = 0; i <= r; i++) {
+      const t = this.plan[i], l = shuf(RT[t].prompts, t + this.S.gen);
+      seen[t] = (seen[t] ?? -1) + 1;
+      pick = l.find(p => !usedText.has(text(p)) && !usedTag.has(tag(p)!)) ?? l[seen[t] % l.length];
+      usedText.add(text(pick));
+      if (tag(pick)) usedTag.add(tag(pick)!);
     }
     const a = this.assign(this.uid, r);
-    return text(list[ROUNDS.slice(0, r).filter(k => k === type).length % list.length])
-      .replace('{P}', a ? this.cn(a) : 'another character');
+    return text(pick).replace('{P}', a ? this.cn(a) : 'another character');
   }
 
   // ---------- scoring ----------
@@ -98,8 +146,8 @@ export class Game {
     this.g<Boon>('boons').filter(ok).forEach(b => {
       if (b.kind === 'take') { if (b.from === pid) take++; if (b.target === pid) take--; }
     });
-    if (all) ROUNDS.forEach((_, rr) => {
-      if (this.performer(rr) !== pid) return;
+    if (all) this.plan.forEach((_, rr) => {
+      if (!this.hasPerf(rr) || this.performer(rr) !== pid) return;
       const v = this.g<PVote>('pvotes').filter(d => d.r === rr);
       if (v.length && v.filter(d => d.up).length > v.length / 2) perf++;
     });
@@ -122,8 +170,14 @@ export class Game {
   }
 
   // ---------- timing ----------
+  duration(): number | undefined {
+    const { phase } = this.S;
+    if (phase === 'act') return this.rt().seconds;
+    if (phase === 'perf') return this.rt(this.perfSource()).performance!.seconds;
+    return DUR[phase];
+  }
   timer(now: number) {
-    const d = DUR[this.S.phase], el = (now - this.S.t0) / 1000;
+    const d = this.duration(), el = (now - this.S.t0) / 1000;
     return { d, el, left: d ? Math.max(0, Math.ceil(d - el)) : 0 };
   }
 
@@ -136,19 +190,23 @@ export class Game {
     const S = this.S, key = [S.gen, S.phase, S.round].join();
     if (adv === key) return;
     adv = key;
-    const n = { ...S, t0: Date.now() }, o: Phase[] = ['joke', 'act', 'review', 'vote', 'score', 'perf', 'perfvote'];
+    const n = { ...S, t0: Date.now() };
+    const nextRound = () => { if (S.round < this.plan.length - 1) { n.round++; n.phase = 'act'; } else n.phase = 'end'; };
     if (S.phase === 'create') n.phase = 'meet';
-    else if (S.phase === 'meet') n.phase = 'joke';
-    else if (S.phase === 'joke') { n.phase = 'act'; n.round = 0; }
-    else if (S.phase === 'perfvote') { if (S.round < ROUNDS.length - 1) { n.round++; n.phase = 'act'; } else n.phase = 'end'; }
-    else n.phase = o[o.indexOf(S.phase) + 1];
-    if (['joke', 'act', 'perf'].includes(n.phase)) n.t0 = Date.now() + game.introCardSeconds * 1000;
+    else if (S.phase === 'meet') { n.phase = 'act'; n.round = 0; }
+    else if (S.phase === 'act') { if (this.rt().kind === 'standup') nextRound(); else n.phase = 'review'; }
+    else if (S.phase === 'review') n.phase = 'vote';
+    else if (S.phase === 'vote') n.phase = 'score';
+    else if (S.phase === 'score') { if (this.hasPerf(S.round)) n.phase = 'perf'; else nextRound(); }
+    else if (S.phase === 'perf') n.phase = 'perfvote';
+    else if (S.phase === 'perfvote') nextRound();
+    if (n.phase === 'act' || n.phase === 'perf') n.t0 = Date.now() + game.introCardSeconds * 1000;
     this.setState(n);
   }
   go(c: 'start' | 'begin' | 'skip' | 'new') {
     const S = this.S;
     if (c === 'start') this.setState({ ...S, phase: 'create', t0: Date.now() });
-    if (c === 'begin') this.setState({ ...S, phase: 'meet', t0: Date.now() });
+    if (c === 'begin') this.setState({ ...S, phase: 'meet', t0: Date.now(), plan: makePlan() });
     if (c === 'skip') { adv = ''; this.next(); }
     if (c === 'new') this.setState({ phase: 'lobby', gen: S.gen + 1, round: 0, t0: 0 });
   }
@@ -156,8 +214,8 @@ export class Game {
   hostTick(now: number) {
     if (!this.isHost) return;
     const S = this.S;
-    if ((S.phase === 'joke' || S.phase === 'act') && this.players.every(p => this.subOf(this.curKey(), p.id))) return this.next();
-    if (S.phase === 'perfvote' && this.players.filter(p => p.id !== this.performer(S.round))
+    if (S.phase === 'act' && this.players.every(p => this.subOf(this.curKey(), p.id))) return this.next();
+    if (S.phase === 'perfvote' && this.players.filter(p => p.id !== this.performer())
       .every(p => this.g<PVote>('pvotes').some(d => d.r === S.round && d.from === p.id))) return this.next();
     const { d, el, left } = this.timer(now);
     if (d && left === 0 && el >= d + (TIMED_SUBMIT.includes(S.phase) ? game.autoAdvanceGraceSeconds : 0)) this.next();

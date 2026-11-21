@@ -1,25 +1,24 @@
 {
   "title": "alias",
   "tagline": "Make up a character, chat as them, then guess who’s who. Keep it chaotic.",
-  "rounds": ["question", "drawing", "question", "drawing"],
+  "schedule": {
+    "rounds": 4,
+    "bigRoundEvery": 5
+  },
   "introCardSeconds": 8,
   "autoAdvanceGraceSeconds": 3,
   "durations": {
     "create": 240,
     "meet": 120,
-    "joke": 120,
-    "act": 120,
     "review": 120,
     "vote": 120,
     "score": 60,
-    "perf": 180,
     "perfvote": 20
   },
   "labels": {
     "lobby": "LOBBY",
     "create": "CREATE",
     "meet": "MEET",
-    "joke": "FIRST TASK",
     "act": "TASK",
     "review": "REVIEW",
     "vote": "VOTE",
@@ -43,10 +42,6 @@
     "mainMaxDelaySeconds": 30,
     "perfDelaySeconds": 10,
     "minGapMs": 400
-  },
-  "standup": {
-    "jokes": 3,
-    "instructions": "Write three stand up jokes from the perspective of your character. You have 2 minutes. They are saved for later."
   },
   "drawing": {
     "width": 500,
