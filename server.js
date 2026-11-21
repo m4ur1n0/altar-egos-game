@@ -2,7 +2,8 @@
 // Same protocol as worker/index.ts, which runs this game on Cloudflare.
 const http=require('http'),fs=require('fs'),os=require('os'),path=require('path');
 const OUT=path.join(__dirname,'out'),PORT=process.env.PORT||3000,rooms={};
-const PROXY_OK=['https://api.openverse.org/']; // image search (components/ImageSearch.tsx); keep in sync with worker
+// Image search sources (components/ImageSearch.tsx); keep in sync with worker
+const proxyOk=t=>{try{const u=new URL(t);return u.protocol==='https:'&&(u.hostname==='api.openverse.org'||u.hostname.endsWith('.gstatic.com'))}catch(e){return false}};
 const TYPES={html:'text/html; charset=utf-8',js:'text/javascript',css:'text/css',json:'application/json',webp:'image/webp',png:'image/png',jpg:'image/jpeg',jpeg:'image/jpeg',svg:'image/svg+xml',ico:'image/x-icon',txt:'text/plain',woff2:'font/woff2'};
 const R=n=>rooms[n]||(rooms[n]={docs:{},clients:new Set()});
 const send=(r,o)=>{const s='data:'+JSON.stringify(o)+'\n\n';r.clients.forEach(c=>c.write(s))};
@@ -16,7 +17,7 @@ http.createServer((req,res)=>{
   let b='';req.on('data',c=>{b+=c;if(b.length>3e6)req.destroy()});
   req.on('end',()=>{try{const m=JSON.parse(b),r=R(m.room||'main');if(typeof m.path==='string'&&m.path.length<200){r.docs[m.path]=m.data;send(r,{t:'set',path:m.path,data:m.data,by:m.by})}}catch(e){}res.end('ok')});return;
  }
- if(u.pathname==='/proxy'){const t=u.searchParams.get('u')||'';if(!PROXY_OK.some(p=>t.startsWith(p))){res.writeHead(403);res.end();return}
+ if(u.pathname==='/proxy'){const t=u.searchParams.get('u')||'';if(!proxyOk(t)){res.writeHead(403);res.end();return}
   fetch(t).then(async r=>{res.writeHead(r.status,{'Content-Type':r.headers.get('content-type')||'application/octet-stream'});res.end(Buffer.from(await r.arrayBuffer()))}).catch(()=>{res.writeHead(502);res.end()});return}
  if(u.pathname==='/reset'){room.docs={};send(room,{t:'init',docs:room.docs});res.end('reset');return}
  let f=path.join(OUT,decodeURIComponent(u.pathname));

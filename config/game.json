@@ -5,14 +5,14 @@
     "rounds": 4,
     "bigRoundEvery": 5
   },
-  "introCardSeconds": 8,
-  "autoAdvanceGraceSeconds": 3,
+  "introCardSeconds": 12,
+  "autoAdvanceGraceSeconds": 5,
   "durations": {
     "create": 240,
     "meet": 120,
     "review": 120,
-    "vote": 120,
-    "score": 60,
+    "vote": 100,
+    "score": 80,
     "perfvote": 20
   },
   "labels": {
@@ -47,9 +47,12 @@
     "width": 500,
     "height": 375,
     "colors": ["#000000", "#e11d48", "#f97316", "#facc15", "#16a34a", "#2563eb", "#7c3aed", "#92400e"],
-    "thin": 3,
+    "thin": 2,
     "thick": 9,
     "eraser": 22
+  },
+  "imageSearch": {
+    "googleCx": "a4776002f1b994617"
   },
   "character": {
     "pictureSize": 120,

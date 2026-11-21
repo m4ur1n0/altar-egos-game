@@ -5,7 +5,8 @@ import { DurableObject } from 'cloudflare:workers';
 interface Env { ROOM: DurableObjectNamespace<Room>; ASSETS: Fetcher }
 
 const enc = new TextEncoder();
-const PROXY_OK = ['https://api.openverse.org/']; // image search (components/ImageSearch.tsx); keep in sync with server.js
+// Image search sources (components/ImageSearch.tsx); keep in sync with server.js
+const proxyOk = (t: string) => { try { const u = new URL(t); return u.protocol === 'https:' && (u.hostname === 'api.openverse.org' || u.hostname.endsWith('.gstatic.com')); } catch { return false; } };
 const msg = (o: unknown) => enc.encode('data:' + JSON.stringify(o) + '\n\n');
 
 export class Room extends DurableObject<Env> {
@@ -62,7 +63,7 @@ async function api(req: Request, env: Env, u: URL) {
   let room = u.searchParams.get('room');
   if (u.pathname === '/proxy') {
     const t = u.searchParams.get('u') || '';
-    if (!PROXY_OK.some(p => t.startsWith(p))) return new Response(null, { status: 403 });
+    if (!proxyOk(t)) return new Response(null, { status: 403 });
     const r = await fetch(t);
     return new Response(r.body, { status: r.status, headers: { 'Content-Type': r.headers.get('content-type') || 'application/octet-stream' } });
   }
