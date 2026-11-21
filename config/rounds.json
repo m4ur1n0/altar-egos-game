@@ -1,0 +1,49 @@
+{
+  "question": {
+    "kind": "text",
+    "label": "question",
+    "favorite": false,
+    "card": {
+      "title": "ROUND",
+      "subtitle": "QUESTION ROUND",
+      "rules": [
+        "Everyone answers the same prompt.",
+        "2 minutes. No word limit.",
+        "Next you read everyone's answers and like the ones you like. Each like is a point for that character.",
+        "Then you vote on who is behind each character."
+      ]
+    },
+    "prompts": [
+      { "text": "Describe your typical outfit.", "tag": "outfit" },
+      "Which character would you want to be close friends with, and why?",
+      "What's your dream job, and why?",
+      "Tell us a secret you've never told anyone.",
+      "What would you get {P} as a gift, and why?",
+      "Who is your character most attracted to, and why?",
+      "How does your character solve interpersonal conflicts at work?"
+    ]
+  },
+  "drawing": {
+    "kind": "draw",
+    "label": "drawing",
+    "favorite": true,
+    "card": {
+      "title": "ROUND",
+      "subtitle": "DRAWING ROUND",
+      "rules": [
+        "Everyone draws the same prompt.",
+        "2 minutes. Use any colors you like.",
+        "Next you see everyone's drawings, like the ones you like, and pick one overall favorite.",
+        "Then you vote on who is behind each character."
+      ]
+    },
+    "prompts": [
+      "Draw your favorite memory.",
+      { "text": "Draw your typical outfit.", "tag": "outfit" },
+      "Draw a gift for {P}.",
+      "Draw the greatest day in your character's life.",
+      "Draw the object your character values most",
+      "Draw your character's biggest fear."
+    ]
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "title": "alias",
+  "tagline": "Make up a character, chat as them, then guess who’s who. Keep it chaotic.",
+  "rounds": ["question", "drawing", "question", "drawing"],
+  "introCardSeconds": 8,
+  "autoAdvanceGraceSeconds": 3,
+  "durations": {
+    "create": 240,
+    "meet": 120,
+    "joke": 120,
+    "act": 120,
+    "review": 120,
+    "vote": 120,
+    "score": 60,
+    "perf": 180,
+    "perfvote": 20
+  },
+  "labels": {
+    "lobby": "LOBBY",
+    "create": "CREATE",
+    "meet": "MEET",
+    "joke": "FIRST TASK",
+    "act": "TASK",
+    "review": "REVIEW",
+    "vote": "VOTE",
+    "score": "RESULTS",
+    "perf": "PERFORMANCE",
+    "perfvote": "THUMBS",
+    "end": "FINAL"
+  },
+  "scoring": {
+    "like": 1,
+    "favorite": 1,
+    "guessedBy": -1,
+    "correctGuess": 2,
+    "performance": 1,
+    "takePoint": 1,
+    "thumbsDownPenalty": -5,
+    "thumbsDownThreshold": 0.75
+  },
+  "chat": {
+    "maxLength": 500,
+    "mainMaxDelaySeconds": 30,
+    "perfDelaySeconds": 10,
+    "minGapMs": 400
+  },
+  "standup": {
+    "jokes": 3,
+    "instructions": "Write three stand up jokes from the perspective of your character. You have 2 minutes. They are saved for later."
+  },
+  "drawing": {
+    "width": 500,
+    "height": 375,
+    "colors": ["#000000", "#e11d48", "#f97316", "#facc15", "#16a34a", "#2563eb", "#7c3aed", "#92400e"],
+    "thin": 3,
+    "thick": 9,
+    "eraser": 22
+  },
+  "character": {
+    "pictureSize": 120,
+    "fields": [
+      { "key": "name", "label": "Name", "max": 30 },
+      { "key": "pro", "label": "Pronouns", "max": 20, "line": 1 },
+      { "key": "age", "label": "Age", "max": 10, "line": 1 },
+      { "key": "occ", "label": "Occupation", "max": 40, "line": 2 },
+      { "key": "loc", "label": "Location", "max": 40, "line": 2 },
+      { "key": "bio", "label": "Bio", "max": 400, "multiline": true }
+    ]
+  }
+}

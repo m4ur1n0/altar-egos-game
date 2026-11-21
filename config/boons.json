@@ -1,0 +1,7 @@
+{
+  "guess": "Make a guess about someone's identity (confirmed or denied, no points)",
+  "notes": "See someone else's notebook",
+  "likers": "See who liked your submission",
+  "top": "See the top three on the leaderboard",
+  "take": "Take a point from another player"
+}
